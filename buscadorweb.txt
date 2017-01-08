@@ -1,0 +1,123 @@
+%{
+#include <stdio.h>
+
+int cp;
+int URL;
+void abrirURL();
+
+%}
+
+/**
+@brief: URL
+Regla que lee 1, activa despues URL a 1 para abrir la url cuando se cumpla la regla
+*/
+url 		   [1]$
+
+/**
+@brief: urlOff
+Regla que lee 0, si es 0 no se abre la url porque pone url a 0
+*/
+urlOff 		   [0]$
+
+
+/**
+@brief: Regla Google
+Cualquier conjunto de caracteres de comiencen o por "google" o contenga www.google o google.es*/
+google         ^((www".")?(google)(".")?((es)|(com))?)$ 
+
+/**
+@brief: Regla UGR
+Cualquier conjunto de caracteres de comiencen o por "ugr" o contenga www.ugr o ugr.es o ugr.com
+Ademas añadimos las tags de ugr si introducimos universidad granada o universidad de granada o universidadgranada*/
+ugr			   ^((www".")?(ugr)(".")?((es)|(com))?)|{tag_ugr}
+tag_ugr		   ("universidad")(" de ")?(" ")?("granada")
+
+/**
+@brief: Regla correoUGR
+Lo mismo para webmailest.ugr.es el correo oficial de la universidad, para una cadena de caracteres que
+comience por www o no seguida de webmailest seguida de un posible punto seguida de un posible espacio en blanco
+seguida ugr y opcional .es o simplemente "correo de la universidad de granada" de ahí la regla tag_ugr*/
+webmailest 		 ^((www".")?(webmailest)(".")?|(" ")?(".")?((ugr)("."es))?)|{correoUGR}
+correoUGR		(correo)(" ")(.)*((ugr)|{tag_ugr}) 
+/*Para el tag de correoUGR he introducido el caracter (.*) cualquier caracter por si buscamos pej:"correo de la ugr"*/
+
+/**
+@brief: Regla decsai
+Para decsai: cualquier cadena que comience por un posible www. seguido de decsai seguido de un posible punto o espacio seguido
+de "ugr" si se introduce o no, de ahí ugr?, seguido de "."es si se introduce o no. Ej: decsai ugr -> abre www.decsai.ugr.es
+*/
+decsai		^(www".")?(decsai)((".")|(" ")(ugr))?("."es)?|{decsaiTag}
+decsaiTag	(departamento)(" ")?(de" ")?(ciencias)(" ")?(de" ")?(la" ")?(computacion)(" ")?(e|y)?(" ")(inteligencia)(" ")?(artificial)
+
+/**
+@brief: SWAD
+Cadena que comience por www. opcionalmente seguida de "swad" seguida de un punto o un espacio en blanco opciona seguida de ugr opcional
+y para terminar un ".es" opcional
+*/
+swad 		^(www".")?(swad)((".")|(" "))?(ugr)?("."es)?$
+
+/**
+@brief: BiblotecaUgr
+Exactamente igua que el anterior en SWAD, salvo que ahora especificamos la biblioteca de la ugr añadiendo ugr obligatorio antes del
+posible es
+Tambien en la regla tagBiblioteca cualquier cadena que contenga "biblioteca" seguida de cualquier conjunto de caracteres ej:de la seguido o bien
+"ugr" o "universidad de granada"
+*/
+BiblotecaUGR 		(^(www".")?(biblioteca)((".")|(" "))?(ugr)("."es)?$)|{tagBibioteca}
+tagBibioteca		(biblioteca)(" ")(.)*((ugr)|{tag_ugr})
+
+/**
+@brief: CSIRC
+podemos introducirlo intentando llegar a traves de parte de la url o directamente escribiendo csirc
+Regla consta de un cadena que comienza con un posible "www." puede estar 1 o 0 veces, seguida de la subcadena csirc
+seguida de un posible punto seguida de una posible subcadena "ugr" seguida de otra posible subcadena. Para finalizar puede estar
+al final la subcadena ".es" 
+*/
+CSIRC 				^((www".")?(csirc)(".")?((ugr)("."es))?)$
+%%
+                 /*----- Sección de Reglas ----------------*/ 
+
+
+.           {} /*Si no coinfecide ninguna no imprimimos nada*/
+{url}			{printf("\nActivando abrir URL, para desactivar insertar 0");URL=1;}
+{urlOff}		{printf("\nDesactivando abrir URL, para activar insertar 1");URL=0;}
+{google}		{printf("\nwww.google.es");if (URL==1) system("firefox www.google.es");}
+{ugr}			{printf("\nwww.ugr.es");if (URL==1) system("firefox www.ugr.es");}
+{webmailest}	{printf("\nwww.webmailest.ugr.es");if (URL==1) system("firefox www.webmailest.ugr.es");}
+{decsai}		{printf("\nwww.decsai.ugr.es");if (URL==1) system("firefox www.decsai.ugr.es");}
+{swad}			{printf("\nwww.swad.ugr.es");if (URL==1) system("firefox www.swad.ugr.es");}
+{BiblotecaUGR}	{printf("\nwww.biblioteca.ugr.es");if (URL==1) system("firefox www.biblioteca.ugr.es");}
+{CSIRC}			{printf("\nwww.csirc.ugr.es");if (URL==1) system("firefox www.csirc.ugr.es");}
+
+%%   
+                /*----- Sección de Procedimientos --------*/ 
+
+int main (int argc, char *argv[])
+{   
+   URL=0;
+  if (argc == 2)   
+  {     
+    yyin = fopen (argv[1], "rt");     
+
+    if (yyin == NULL)     
+    {       
+      printf ("El fichero %s no se puede abrir\n", argv[1]);       
+      exit (-1);     
+    }   
+  }   
+  else yyin = stdin;   
+ 
+  printf("\n*******************************");
+  printf("\nSimulador de un buscador web\n");
+  printf("\nIntroduzca su peticion a una de las siguientes webs: \n\nwww.google.es"
+  	"\nwww.ugr.es \nwww.webmailest.ugr.es \nwww.swad.ugr.es \nwww.decsai.ugr.es"
+  	"\nwww.biblioteca.ugr.es\n");
+  printf("\n\nPara activar abrir una URL encontrada pulse 1 para descativar pulse 0\n");
+  printf("\nEjemplo: swad --> www.swad.ugr.es\n");	
+ 
+  yylex ();   
+
+  return 0; 
+}
+
+ 
